@@ -1,4 +1,4 @@
-name: Deploy Static Website
+name: Generate a build and push to another branch
 
 on:
   push:
@@ -6,18 +6,22 @@ on:
       - main # The branch name you are committing the new changes
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    name: Deploy to build branch
+    name: Build and Push
     steps:
-      - name: Checkout code
+      - name: git-checkout
         uses: actions/checkout@v3
 
-      - name: Deploy to build branch
-        run: |
-          git checkout build
-          git rm -r . # Clear the existing files in the build branch
-          cp -r ./* ./.* ../  # Copy all files including hidden files
-          git add .
-          git commit -m "Deploy static website"
-          git push origin build
+      - name: Get branch name
+        id: branch_name
+        run: echo "::set-output name=BRANCH_NAME::$(echo $GITHUB_REF | awk -F'/' '{print $3}')"
+
+      - name: Push
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: self
+          BRANCH: build # The branch name where you want to push the assets
+          FOLDER: main # The directory where your assets are generated
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub will automatically add this - you don't need to bother getting a token
+          MESSAGE: "Build: ({sha}) {msg}" # The commit message
